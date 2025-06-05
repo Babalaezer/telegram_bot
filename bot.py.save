@@ -1,0 +1,93 @@
+import logging
+import re
+from telegram import Update
+from telegram.ext import Application, MessageHandler, filters, ContextTypes, CommandHandler
+
+# Настройка логирования
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+
+# Словарь соответствия тегов и каналов
+TAG_TO_CHANNEL = {
+    '@СЭС': '-1002614380862',  # ID канала для тега @СЭС
+    # Добавь другие теги по необходимости
+}
+
+# ID исходного канала, откуда пересылаем
+SOURCE_CHANNEL_ID = '-4795227385'
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик сообщений"""
+    
+    print(f"Получено сообщение из чата: {update.effective_chat.id}")  # Отладка
+    
+    # Проверяем, что сообщение из нужного канала
+    if update.effective_chat.id != int(SOURCE_CHANNEL_ID):
+        print(f"Сообщение не из нужного канала. Ожидается: {SOURCE_CHANNEL_ID}, получено: {update.effective_chat.id}")
+        return
+    
+    message_text = update.message.text or update.message.caption or ""
+    print(f"Текст сообщения: {message_text}")  # Отладка
+    
+    # Ищем теги в сообщении
+    found_tags = []
+    for tag in TAG_TO_CHANNEL.keys():
+        if tag.lower() in message_text.lower():
+            found_tags.append(tag)
+    
+    print(f"Найденные теги: {found_tags}")  # Отладка
+    
+    # Пересылаем сообщение в соответствующие каналы
+    for tag in found_tags:
+        target_channel = TAG_TO_CHANNEL[tag]
+        try:
+            print(f"Пытаюсь переслать в канал: {target_channel}")  # Отладка
+            
+            # Пересылаем оригинальное сообщение
+            await context.bot.forward_message(
+                chat_id=target_channel,
+                from_chat_id=update.effective_chat.id,
+                message_id=update.message.message_id
+            )
+            
+            print(f"✅ Сообщение успешно переслано в канал {target_channel} по тегу {tag}")
+            logging.info(f"Сообщение переслано в канал {target_channel} по тегу {tag}")
+            
+        except Exception as e:
+            print(f"❌ Ошибка при пересылке в {target_channel}: {e}")
+            logging.error(f"Ошибка при пересылке в {target_channel}: {e}")
+
+async def get_chat_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Получает ID чата - полезно для настройки"""
+    chat_id = update.effective_chat.id
+    await update.message.reply_text(f"Chat ID: {chat_id}")
+    print(f"Chat ID запрошен: {chat_id}")
+
+def main():
+    """Запуск бота"""
+    # Токен твоего бота от @BotFather
+    BOT_TOKEN = "7340132549:AAHtKMnxk4F5Vu4POgeFm6ZtFQAHitmaE74"  # Твой токен
+    
+    # Создаем приложение
+    application = Application.builder().token(BOT_TOKEN).build()
+    
+    # Добавляем обработчик для всех текстовых сообщений
+    application.add_handler(MessageHandler(
+        filters.TEXT | filters.CAPTION, 
+        handle_message
+    ))
+    
+    # Добавляем команду для получения ID чата
+    application.add_handler(CommandHandler("chatid", get_chat_id))
+    
+    # Запускаем бота
+    print("🤖 Бот запущен...")
+    print(f"📥 Слушаю канал: {SOURCE_CHANNEL_ID}")
+    print(f"📤 Пересылаю в каналы: {list(TAG_TO_CHANNEL.values())}")
+    print(f"🏷️ Отслеживаю теги: {list(TAG_TO_CHANNEL.keys())}")
+    application.run_polling()
+
+if __name__ == '__main__':
+    main()
