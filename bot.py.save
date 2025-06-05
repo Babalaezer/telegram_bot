@@ -68,7 +68,7 @@ async def get_chat_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     """Запуск бота"""
     # Токен твоего бота от @BotFather
-    BOT_TOKEN = "7340132549:AAHtKMnxk4F5Vu4POgeFm6ZtFQAHitmaE74"  # Твой токен
+    BOT_TOKEN = "7340132549:AAHLaDnltnSNftHe_WzPwRqKSR59YYa_r6M"  # Твой токен
     
     # Создаем приложение
     application = Application.builder().token(BOT_TOKEN).build()
